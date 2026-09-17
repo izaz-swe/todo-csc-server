@@ -41,6 +41,19 @@ services:
     networks:
       - app_net
 
+  # 4. Cloudflare Tunnel (Secure Public Ingress)
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: todo_tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - app_net
+    depends_on:
+      - proxy
+
 networks:
   app_net:
     driver: bridge

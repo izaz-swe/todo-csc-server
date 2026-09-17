@@ -150,5 +150,21 @@ The workflow will:
 2. Join your private Tailscale network via `tailscale/github-action@v2`.
 3. Open a secure SSH session to your server's Tailscale IP.
 4. Execute `docker compose up -d --build` to deploy seamlessly.
-# todo-csc-server
-# todo-csc-server
+---
+
+## 6. Setting up Cloudflare Tunnel Public Hostname
+
+Since your tunnel (`todo-csc`) token is configured in `.env`, the final step is routing your custom subdomain to the Nginx reverse proxy inside Cloudflare Zero Trust:
+
+1. Open **[Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/)** ➔ **Networks** ➔ **Tunnels**.
+2. Click on your tunnel **`todo-csc`** and select **Configure**.
+3. Go to the **Public Hostname** tab and click **Add a public hostname**.
+4. Fill in:
+   - **Subdomain:** e.g., `todo` (or leave blank for root domain)
+   - **Domain:** Select your domain from the dropdown (e.g., `yourdomain.com`)
+   - **Type:** `HTTP`
+   - **URL:** `proxy:80`
+     *(Because both `todo_tunnel` and `todo_proxy` are in the same Docker network `app_net`, Cloudflare Tunnel can resolve `proxy` directly by its container service name).*
+5. Click **Save Hostname**.
+
+Now your application is publicly accessible at `https://todo.yourdomain.com` with automatic HTTPS, DDoS protection, and CDN caching!

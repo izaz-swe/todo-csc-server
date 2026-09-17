@@ -66,16 +66,28 @@ jobs:
         env:
           TARGET_HOST: ${{ secrets.TARGET_HOST }}     # e.g., 100.x.y.z or MagicDNS name like 'csc'
           TARGET_USER: ${{ secrets.TARGET_USER }}     # e.g., 'ubuntu' or 'csc'
-          TARGET_DIR: ${{ secrets.TARGET_DIR }}       # e.g., '/home/csc/todo-app'
+          TARGET_DIR: ${{ secrets.TARGET_DIR }}       # e.g., '/home/csc/agy-cli-test/todo-app'
+          CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
         run: |
           echo "Connecting to $TARGET_USER@$TARGET_HOST via Tailscale..."
-          ssh $TARGET_USER@$TARGET_HOST << 'EOF'
+          ssh $TARGET_USER@$TARGET_HOST "TARGET_DIR='$TARGET_DIR' CLOUDFLARE_TUNNEL_TOKEN='$CLOUDFLARE_TUNNEL_TOKEN' bash -s" << 'EOF'
             set -e
             # Fallback using $HOME instead of ~ to guarantee expansion
             DIR="${TARGET_DIR:-$HOME/agy-cli-test/todo-app}"
             echo "Navigating to $DIR..."
             cd "$DIR"
+
             git pull origin main || true
+
+            # If CLOUDFLARE_TUNNEL_TOKEN is set as a secret, keep .env synchronized
+            if [ -n "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
+              if [ -f .env ] && grep -q "^CLOUDFLARE_TUNNEL_TOKEN=" .env; then
+                sed -i "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=$CLOUDFLARE_TUNNEL_TOKEN|" .env
+              else
+                echo "CLOUDFLARE_TUNNEL_TOKEN=$CLOUDFLARE_TUNNEL_TOKEN" >> .env
+              fi
+            fi
+
             docker compose down --remove-orphans || true
             docker compose up -d --build
             
@@ -83,4 +95,8 @@ jobs:
             sleep 5
             curl -f http://localhost:8080/api/health || exit 1
             echo "Deployment successful and healthy!"
+
+            # Container status check
+            echo "=== Container Status ==="
+            docker compose ps
           EOF
