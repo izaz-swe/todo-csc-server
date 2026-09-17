@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo App | Tailscale + Docker + Nginx</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-content">
+        <h1>Cloud Todo Stack</h1>
+        <p class="subtitle">Decoupled Microservice Architecture (Frontend + Backend + Nginx Reverse Proxy)</p>
+      </div>
+      <div class="status-badge" id="backend-status">
+        <span class="dot"></span>
+        <span id="backend-text">Checking Backend...</span>
+      </div>
+    </header>
+
+    <!-- Architecture summary card -->
+    <section class="card arch-card">
+      <div class="arch-flow">
+        <div class="arch-step">
+          <span class="icon">🔒</span>
+          <strong>Tailscale Network</strong>
+          <small>VPN Mesh / SSH CI Runner</small>
+        </div>
+        <span class="arrow">➜</span>
+        <div class="arch-step">
+          <span class="icon">🌐</span>
+          <strong>Nginx Gateway (:80)</strong>
+          <small>Reverse Proxy Router</small>
+        </div>
+        <span class="arrow">➜</span>
+        <div class="arch-step split">
+          <div>
+            <span class="badge blue">/</span> <strong>Frontend</strong> (SPA)
+          </div>
+          <div>
+            <span class="badge green">/api</span> <strong>Backend</strong> (Node.js)
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- App main view -->
+    <main class="card main-card">
+      <div class="card-header">
+        <h2>Tasks</h2>
+        <span id="task-counter" class="counter">0 tasks</span>
+      </div>
+
+      <form id="add-form" class="add-form">
+        <input 
+          type="text" 
+          id="todo-input" 
+          placeholder="What needs to be done?" 
+          autocomplete="off" 
+          required
+        />
+        <button type="submit" id="add-btn">Add Task</button>
+      </form>
+
+      <ul id="todo-list" class="todo-list">
+        <li class="loading">Loading tasks from backend API...</li>
+      </ul>
+    </main>
+
+    <!-- Diagnostic Information -->
+    <footer class="system-meta">
+      <div class="meta-item">
+        <strong>API Endpoint:</strong> <code id="api-endpoint">/api/todos</code>
+      </div>
+      <div class="meta-item">
+        <strong>Uptime:</strong> <span id="uptime-val">-</span>
+      </div>
+      <div class="meta-item">
+        <strong>Container Process:</strong> <span class="tag">Native Node (No PM2 required)</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+name: Build & Deploy via Tailscale
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Phase 1: Test & Lint
+  # --------------------------------------------------------------------------
+  test:
+    name: Test Services
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install & Verify Backend
+        working-directory: ./backend
+        run: |
+          npm ci
+          node --check src/index.js
+
+  # --------------------------------------------------------------------------
+  # Phase 2: Deploy to Private Server via Tailscale VPN
+  # --------------------------------------------------------------------------
+  deploy:
+    name: Deploy to Server via Tailscale
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Connect GitHub Actions runner into your private Tailscale Mesh Network
+      # Requires Tailscale OAuth Client credentials or Auth Key in GitHub Secrets
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      # Setup SSH key to access the remote server on Tailscale
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      # Add server host key to known_hosts to prevent interactive prompt
+      - name: Add Server to Known Hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.TARGET_HOST }} >> ~/.ssh/known_hosts
+
+      # Deploy using Docker Compose over Tailscale
+      - name: Deploy with Docker Compose
+        env:
+          TARGET_HOST: ${{ secrets.TARGET_HOST }}     # e.g., 100.x.y.z or MagicDNS name like 'csc'
+          TARGET_USER: ${{ secrets.TARGET_USER }}     # e.g., 'ubuntu' or 'csc'
+          TARGET_DIR: ${{ secrets.TARGET_DIR }}       # e.g., '/home/csc/todo-app'
+        run: |
+          echo "Connecting to $TARGET_USER@$TARGET_HOST via Tailscale..."
+          ssh $TARGET_USER@$TARGET_HOST << 'EOF'
+            set -e
+            cd "${TARGET_DIR:-~/todo-app}"
+            git pull origin main || true
+            docker compose down --remove-orphans || true
+            docker compose up -d --build
+            
+            # Health check verification
+            sleep 5
+            curl -f http://localhost/api/health || exit 1
+            echo "Deployment successful and healthy!"
+          EOF
