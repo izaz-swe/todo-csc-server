@@ -81,6 +81,6 @@ jobs:
             
             # Health check verification
             sleep 5
-            curl -f http://localhost/api/health || exit 1
+            curl -f http://localhost:8080/api/health || exit 1
             echo "Deployment successful and healthy!"
           EOF
