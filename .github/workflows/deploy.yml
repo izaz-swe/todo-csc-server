@@ -71,7 +71,10 @@ jobs:
           echo "Connecting to $TARGET_USER@$TARGET_HOST via Tailscale..."
           ssh $TARGET_USER@$TARGET_HOST << 'EOF'
             set -e
-            cd "${TARGET_DIR:-~/todo-app}"
+            # Fallback using $HOME instead of ~ to guarantee expansion
+            DIR="${TARGET_DIR:-$HOME/agy-cli-test/todo-app}"
+            echo "Navigating to $DIR..."
+            cd "$DIR"
             git pull origin main || true
             docker compose down --remove-orphans || true
             docker compose up -d --build
